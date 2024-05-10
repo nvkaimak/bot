@@ -62,6 +62,8 @@ def get_text_messages(message):
         words = bot.send_message(message.from_user.id, 'Введите слово, которое хотите удалить')
         bot.register_next_step_handler(words, delete_words)
 
+
+
     # elif message.text == Command.NEXT:
     #     pass
 

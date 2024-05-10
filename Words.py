@@ -11,11 +11,37 @@ class Words():
     def __init__(self, id_user):
         self.DSN = f'postgresql://{USER}:{PASSWORD}@localhost:5432/{DATABASE}'
         self.id_user = id_user
+        self.create_tables()
+        self.add_common_words()
 
     def session(self):
         engine = create_engine(self.DSN)
         Session = sessionmaker(bind=engine)
         return Session()
+
+    def create_tables(self):
+        engine = create_engine(self.DSN)
+        Base.metadata.create_all(engine)
+
+    def add_common_words(self):
+        session = self.session()
+        with session() as session:
+            common_words_data = [
+                {'eng': 'red', 'rus': 'красный'},
+                {'eng': 'blue', 'rus': 'синий'},
+                {'eng': 'green', 'rus': 'зеленый'},
+                {'eng': 'yellow', 'rus': 'желтый'},
+                {'eng': 'white', 'rus': 'белый'},
+                {'eng': 'black', 'rus': 'черный'},
+                {'eng': 'I', 'rus': 'я'},
+                {'eng': 'you', 'rus': 'ты'},
+                {'eng': 'he', 'rus': 'он'},
+                {'eng': 'she', 'rus': 'она'}
+            ]
+            for word_data in common_words_data:
+                word = Translator(**word_data)
+                session.add(word)
+            session.commit()
 
     def create_start_links(self):
         session = self.session()

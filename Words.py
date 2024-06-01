@@ -1,51 +1,23 @@
 import random
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
-from conn import *
+from decorators import session_decorator
 from model import *
 
 
 class Words():
     def __init__(self, id_user):
-        self.DSN = f'postgresql://{USER}:{PASSWORD}@localhost:5432/{DATABASE}'
         self.id_user = id_user
-        self.create_tables()
         self.add_common_words()
 
-    def session(self):
-        engine = create_engine(self.DSN)
-        Session = sessionmaker(bind=engine)
-        return Session()
+    class Words:
+        def __init__(self, id_user):
+            self.id_user = id_user
+            self.add_common_words()
 
-    def create_tables(self):
-        engine = create_engine(self.DSN)
-        Base.metadata.create_all(engine)
 
-    def add_common_words(self):
-        session = self.session()
-        with session() as session:
-            common_words_data = [
-                {'eng': 'red', 'rus': 'красный'},
-                {'eng': 'blue', 'rus': 'синий'},
-                {'eng': 'green', 'rus': 'зеленый'},
-                {'eng': 'yellow', 'rus': 'желтый'},
-                {'eng': 'white', 'rus': 'белый'},
-                {'eng': 'black', 'rus': 'черный'},
-                {'eng': 'I', 'rus': 'я'},
-                {'eng': 'you', 'rus': 'ты'},
-                {'eng': 'he', 'rus': 'он'},
-                {'eng': 'she', 'rus': 'она'}
-            ]
-            for word_data in common_words_data:
-                word = Translator(**word_data)
-                session.add(word)
-            session.commit()
 
-    def create_start_links(self):
-        session = self.session()
-        with session:
+        @session_decorator
+        def create_start_links(self, session):
             existing_user = session.query(User.id_user_telegram).where(User.id_user_telegram == self.id_user).first()
             if existing_user is None:
                 new_user = User(id_user_telegram=self.id_user)
@@ -57,9 +29,8 @@ class Words():
                     session.add(obj)
                     session.commit()
 
-    def get_words(self):
-        session = self.session()
-        with session:
+        @session_decorator
+        def get_words(self, session):
             words = session.query(Translator.eng, Translator.rus) \
                 .select_from(UserWords) \
                 .join(Translator, UserWords.id_word == Translator.id) \
@@ -68,42 +39,34 @@ class Words():
             words_copy = words[:]
             words_copy.remove(target)
             random.shuffle(words_copy)
-
             return target.rus, target.eng, [eng.eng for eng in words_copy[:3]]
 
-    def add_word(self, eng, rus):
-        session = self.session()
-        with session:
+        @session_decorator
+        def add_word(self, session, eng, rus):
             existing_words = session.query(Translator.id).where(Translator.eng == eng).first()
             if existing_words is None:
                 words = Translator(eng=eng, rus=rus)
                 session.add(words)
                 session.commit()
+            else:
+                words = existing_words
 
             user_words = UserWords(id_user=self.id_user, id_word=words.id)
             session.add(user_words)
             session.commit()
 
-
-    #
-    def delete_word(self, eng):
-        session = self.session()
-        existing_words = session.query(Translator.id)\
-            .where(Translator.eng == eng)\
-            .first()
-        flag = 1
-        with session:
-            if existing_words:
-                words = session.query(UserWords) \
-                    .select_from(UserWords) \
-                    .join(Translator) \
-                    .filter(UserWords.id_user == self.id_user) \
-                    .filter(Translator.eng == eng) \
-                    .first()
-                session.delete(words)
-                session.commit()
-
+        @session_decorator
+        def delete_word(self, session, eng):
+            word = session.query(Translator).filter_by(eng=eng).first()
+            if word:
+                user_word = session.query(UserWords).join(Translator).filter_by(id_user=self.id_user,
+                                                                                id_word=word.id).first()
+                if user_word:
+                    session.delete(user_word)
+                    session.commit()
+                    return f"Слово '{eng}' успешно удалено."
+                else:
+                    return f"Слово '{eng}' не найдено у вас в карточках."
             else:
-                flag = 0
+                return f"Слово '{eng}' не найдено в базе данных."
 
-        return flag

@@ -4,17 +4,9 @@ from decorators import session_decorator
 from model import *
 
 
-class Words():
-    def __init__(self, id_user):
-        self.id_user = id_user
-        self.add_common_words()
-
-    class Words:
+class Words:
         def __init__(self, id_user):
             self.id_user = id_user
-            self.add_common_words()
-
-
 
         @session_decorator
         def create_start_links(self, session):
@@ -59,8 +51,9 @@ class Words():
         def delete_word(self, session, eng):
             word = session.query(Translator).filter_by(eng=eng).first()
             if word:
-                user_word = session.query(UserWords).join(Translator).filter_by(id_user=self.id_user,
-                                                                                id_word=word.id).first()
+                user_word = session.query(UserWords) \
+                    .filter(UserWords.id_user == self.id_user, UserWords.id_word == word.id) \
+                    .first()
                 if user_word:
                     session.delete(user_word)
                     session.commit()
@@ -70,3 +63,25 @@ class Words():
             else:
                 return f"Слово '{eng}' не найдено в базе данных."
 
+
+class AddWords():
+    def __init__(self):
+        self.common_words_data = [
+            {'eng': 'red', 'rus': 'красный'},
+            {'eng': 'blue', 'rus': 'синий'},
+            {'eng': 'green', 'rus': 'зеленый'},
+            {'eng': 'yellow', 'rus': 'желтый'},
+            {'eng': 'white', 'rus': 'белый'},
+            {'eng': 'black', 'rus': 'черный'},
+            {'eng': 'I', 'rus': 'я'},
+            {'eng': 'you', 'rus': 'ты'},
+            {'eng': 'he', 'rus': 'он'},
+            {'eng': 'she', 'rus': 'она'}
+        ]
+
+
+    @session_decorator
+    def add_words(self, session):
+        translator_objects = [Translator(**word_data) for word_data in self.common_words_data]
+        session.bulk_save_objects(translator_objects)
+        session.commit()

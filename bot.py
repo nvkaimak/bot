@@ -1,13 +1,13 @@
 from telebot import types, TeleBot
 from telebot.asyncio_handler_backends import StatesGroup, State
-from Words import Words
+from Words import Words, AddWords
 from conn import TOKEN
 from model import *
 from decorators import *
 
 bot = TeleBot(TOKEN)
 
-url_bot = 't.me/netology_translator_bot'
+url_bot = 't.me/netology_translator_2_bot'
 
 
 @engine_decorator
@@ -16,26 +16,11 @@ def create_db(engine):
 
 create_db()
 
-@session_decorator
-def add_common_words(session):
-    common_words_data = [
-        {'eng': 'red', 'rus': 'красный'},
-        {'eng': 'blue', 'rus': 'синий'},
-        {'eng': 'green', 'rus': 'зеленый'},
-        {'eng': 'yellow', 'rus': 'желтый'},
-        {'eng': 'white', 'rus': 'белый'},
-        {'eng': 'black', 'rus': 'черный'},
-        {'eng': 'I', 'rus': 'я'},
-        {'eng': 'you', 'rus': 'ты'},
-        {'eng': 'he', 'rus': 'он'},
-        {'eng': 'she', 'rus': 'она'}
-    ]
-    for word_data in common_words_data:
-        word = Translator(**word_data)
-        session.add(word)
-    session.commit()
+add_words = AddWords()
+add_words.add_words()
 
-add_common_words()
+
+
 
 class Command:
     ADD_WORD = 'Добавить слово ➕'
